@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>커뮤니티 게시판</title>
+    <!-- Bootstrap CSS CDN -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome CSS CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Custom CSS -->
+    <style>
+        body {
+            background-color: #3F51B5; /* 인디고 블루 색상 */
+            color: white;
+        }
+        .container {
+            background-color: #ffffff;
+            color: #333;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .form-control {
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="text-center mb-4"><i class="fas fa-comments"></i> 커뮤니티 게시판</h1>
+        
+        <!-- 게시글 작성 폼 -->
+        <form method="post" class="mb-4">
+            <div class="form-group">
+                <input type="text" class="form-control" name="title" placeholder="제목을 입력하세요" required>
+            </div>
+            <div class="form-group">
+                <textarea class="form-control" name="content" rows="3" placeholder="본문을 작성하세요" required></textarea>
+            </div>
+            <div class="form-group">
+                <input type="password" class="form-control" name="password" placeholder="비밀번호를 입력하세요(Optional)">
+            </div>
+            <button type="submit" class="btn btn-primary"><i class="fas fa-paper-plane"></i> 글 작성하기</button>
+        </form>
+
+        <!-- 작성된 글 목록 -->
+        <h2 class="mb-3"><i class="fas fa-list"></i> 작성된 글 목록</h2>
+        <ul class="list-group">
+        {% for post in posts %}
+            <li class="list-group-item d-flex justify-content-between align-items-center" id="post-{{ post.id }}">
+                <div>
+                    <h5><a href="{{ url_for('view_post', post_id=post.id) }}">{{ post.title }}</a></h5>
+                    <p>{{ post.content[:100] }}{% if post.content|length > 100 %}...{% endif %}</p>
+                </div>
+                <div>
+                    <small class="text-muted">{{ post.created_at.strftime('%Y년 %m월 %d일 %H시 %M분') }}</small>
+                    <button class="btn btn-danger btn-sm" onclick="deletePost('{{ post.id }}', {{ post.has_password|tojson }})"><i class="fas fa-trash-alt"></i> 삭제</button>
+                </div>
+            </li>
+        {% endfor %}
+        </ul>
+    </div>
+
+    <!-- Bootstrap JS, Popper.js, and jQuery -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.3/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+    <script>
+    function deletePost(postId, hasPassword) {
+        var password = '';
+        if (hasPassword) {
+            password = prompt('게시물 삭제를 위해 비밀번호를 입력하세요:');
+            if (password === null) { return; }  // 사용자가 취소한 경우
+        }
+        
+        if (confirm('정말로 삭제하시겠습니까?')) {
+            fetch(`/delete/${postId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ password: password }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById(`post-${postId}`).remove();
+                } else {
+                    alert('게시글 삭제 : ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('게시글 삭제 중 오류 발생: ' + error.message);
+            });
+        }
+    }
+    </script>
+</body>
+</html>
