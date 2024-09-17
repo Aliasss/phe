@@ -11,8 +11,7 @@
     <!-- Custom CSS -->
     <style>
         body {
-            /* background-color: #3F51B5; /* 인디고 블루 색상 */
-            background-color:black;
+            background-color: black;
             color: white;
         }
         .container {
@@ -32,7 +31,7 @@
         <h1 class="text-center mb-4"><i class="fas fa-comments"></i> Community test</h1>
         
         <!-- 게시글 작성 폼 -->
-        <form method="post" class="mb-4">
+        <form id="post-form" class="mb-4">
             <div class="form-group">
                 <input type="text" class="form-control" name="title" placeholder="제목을 입력하세요" required>
             </div>
@@ -47,8 +46,8 @@
 
         <!-- 작성된 글 목록 -->
         <h2 class="mb-3"><i class="fas fa-list"></i> 작성된 글 목록</h2>
-        <ul class="list-group">
-        {% for post in posts %}
+        <ul id="posts-list" class="list-group">
+            {% for post in posts %}
             <li class="list-group-item d-flex justify-content-between align-items-center" id="post-{{ post.id }}">
                 <div>
                     <h5><a href="{{ url_for('view_post', post_id=post.id) }}">{{ post.title }}</a></h5>
@@ -59,7 +58,7 @@
                     <button class="btn btn-danger btn-sm" onclick="deletePost('{{ post.id }}', {{ post.has_password|tojson }})"><i class="fas fa-trash-alt"></i> 삭제</button>
                 </div>
             </li>
-        {% endfor %}
+            {% endfor %}
         </ul>
     </div>
 
@@ -69,16 +68,57 @@
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 
     <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 토큰 가져오기
+        fetch('/api/token')
+            .then(response => response.json())
+            .then(data => {
+                document.cookie = `token=${data.token}; path=/; secure; samesite=Strict`;
+            });
+
+        // 게시글 작성
+        document.getElementById('post-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            var title = document.querySelector('input[name="title"]').value;
+            var content = document.querySelector('textarea[name="content"]').value;
+            var password = document.querySelector('input[name="password"]').value;
+
+            fetch('/api/posts', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    title: title,
+                    content: content,
+                    password: password
+                }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.reload();
+                } else {
+                    alert('게시글 작성 실패: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('게시글 작성 중 오류 발생: ' + error.message);
+            });
+        });
+    });
+
     function deletePost(postId, hasPassword) {
         var password = '';
         if (hasPassword) {
             password = prompt('게시물 삭제를 위해 비밀번호를 입력하세요:');
-            if (password === null) { return; }  // 사용자가 취소한 경우
+            if (password === null) { return; }
         }
         
         if (confirm('정말로 삭제하시겠습니까?')) {
-            fetch(`/delete/${postId}`, {
-                method: 'POST',
+            fetch(`/api/posts/${postId}`, {
+                method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json',
                 },
@@ -89,7 +129,7 @@
                 if (data.success) {
                     document.getElementById(`post-${postId}`).remove();
                 } else {
-                    alert('게시글 삭제 : ' + data.error);
+                    alert('게시글 삭제 실패: ' + data.error);
                 }
             })
             .catch(error => {
